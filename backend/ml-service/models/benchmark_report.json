@@ -1,0 +1,26 @@
+{
+    "version": "1.0.0",
+    "training_date": "2026-05-29",
+    "validation_strategy": "Chronological 80/20 Time-based Split",
+    "total_test_sessions": 331,
+    "metrics": {
+        "heuristic": {
+            "weight_mae": 6.232628398791541,
+            "weight_rmse": 11.77572391473289,
+            "reps_mae": 10.96676737160121,
+            "reps_rmse": 13.101739927348087
+        },
+        "ml_only": {
+            "weight_mae": 1.239164149043303,
+            "weight_rmse": 2.614407142408633,
+            "reps_mae": 1.021570996978852,
+            "reps_rmse": 1.4645104996866747
+        },
+        "hybrid": {
+            "weight_mae": 3.3625377643504533,
+            "weight_rmse": 7.650109096234512,
+            "reps_mae": 1.7129909365558913,
+            "reps_rmse": 3.5752590593395785
+        }
+    }
+}

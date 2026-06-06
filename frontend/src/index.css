@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --color-bg-main: #0F1117;
+  --color-bg-sidebar: #151821;
+  --color-bg-card: #1A1D24;
+  --color-primary-accent: #00E5A8;
+  --color-secondary-accent: #00B8FF;
+  --color-success-custom: #00E676;
+  --color-warning-custom: #FFC857;
+  --color-danger-custom: #FF5A5A;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #B8C0CC;
+}
+
+body {
+  background-color: var(--color-bg-main);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar for premium SaaS feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0F1117;
+}
+::-webkit-scrollbar-thumb {
+  background: #1A1D24;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #252830;
+}
