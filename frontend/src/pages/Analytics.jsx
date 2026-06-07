@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { workoutApi, coachingApi } from '../services/api';
+import { workoutApi, coachingApi, dailyLogApi } from '../services/api';
 import {
   VolumeTrendChart,
   FatigueTrendChart,
   MovementBalanceChart,
-  CoachingTrendsChart
+  CoachingTrendsChart,
+  RecoveryTrendsChart
 } from '../components/Charts';
 import { LoadingChart, EmptyState, ErrorState } from '../components/UIStates';
 import {
@@ -15,7 +16,8 @@ import {
   BarChart4,
   ArrowRight,
   BrainCircuit,
-  BarChart3
+  BarChart3,
+  ClipboardCheck
 } from 'lucide-react';
 
 function safeFixed(value, digits = 2) {
@@ -78,6 +80,7 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [coachingData, setCoachingData] = useState(null);
+  const [recoveryLogs, setRecoveryLogs] = useState([]);
   const [error, setError] = useState(null);
   const [mlImportance, setMlImportance] = useState(null);
   const [mlPerformance, setMlPerformance] = useState(null);
@@ -87,23 +90,27 @@ export default function Analytics() {
     try {
       setLoading(true);
       setError(null);
+      
+      const localToday = new Date().toISOString().split('T')[0];
       const [summary, coaching] = await Promise.all([
         workoutApi.getDashboardSummary(),
-        coachingApi.getSummary()
+        coachingApi.getSummary(localToday)
       ]);
       setData(summary);
       setCoachingData(coaching);
 
-      // Fetch ML details gracefully
+      // Fetch ML details & recovery logs gracefully
       try {
-        const [importanceRes, performanceRes] = await Promise.all([
+        const [importanceRes, performanceRes, logsRes] = await Promise.all([
           workoutApi.getMLFeatureImportance(),
-          workoutApi.getMLPerformance()
+          workoutApi.getMLPerformance(),
+          dailyLogApi.getRecentLogs(30)
         ]);
         if (importanceRes.success) setMlImportance(importanceRes.data);
         if (performanceRes.success) setMlPerformance(performanceRes.data);
+        if (logsRes.success) setRecoveryLogs(logsRes.data);
       } catch (mlErr) {
-        console.warn('Gracefully handled ML endpoints failure:', mlErr);
+        console.warn('Gracefully handled ML/logs endpoints failure:', mlErr);
       }
     } catch (err) {
       console.error('Error loading analytics:', err);
@@ -137,6 +144,66 @@ export default function Analytics() {
           message={error}
           onRetry={loadAnalytics}
         />
+      </div>
+    );
+  }
+
+  function renderRecoveryTrends() {
+    return (
+      <div className="border-t border-gray-800/80 pt-6 space-y-6">
+        <div className="space-y-0.5">
+          <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            <ClipboardCheck className="h-5 w-5 text-primary-accent" />
+            Recovery Context Trends
+          </h2>
+          <p className="text-xs text-text-secondary">
+            Analyze sleep quality, energy levels, stress, and soreness over the last 30 days.
+          </p>
+        </div>
+
+        {recoveryLogs.length === 0 ? (
+          <div className="bg-bg-card border border-gray-800 rounded-xl p-8 text-center space-y-4 shadow">
+            <ClipboardCheck className="h-10 w-10 text-text-secondary mx-auto opacity-50" />
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-white">No Recovery Logs Available</h4>
+              <p className="text-xs text-text-secondary max-w-sm mx-auto">
+                Complete your first recovery check-in to unlock daily recovery insights.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/daily-log')}
+              className="bg-primary-accent text-black text-xs font-bold px-4 py-2 rounded-lg hover:bg-primary-accent/90 transition-all cursor-pointer shadow-sm inline-block"
+            >
+              Complete first recovery check-in
+            </button>
+          </div>
+        ) : recoveryLogs.length < 7 ? (
+          <div className="bg-bg-card border border-gray-800 rounded-xl p-8 text-center space-y-3 shadow">
+            <ClipboardCheck className="h-10 w-10 text-warning-custom mx-auto opacity-70 animate-pulse" />
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-white">Building Recovery Baseline</h4>
+              <p className="text-xs text-text-secondary max-w-sm mx-auto">
+                Logged {recoveryLogs.length} of 7 check-ins. Complete a few more recovery check-ins to unlock trend insights.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/daily-log')}
+              className="bg-primary-accent text-black text-xs font-bold px-4 py-2 rounded-lg hover:bg-primary-accent/90 transition-all cursor-pointer shadow-sm inline-block"
+            >
+              Complete Check-In
+            </button>
+          </div>
+        ) : (
+          <div className="bg-bg-card border border-gray-800 rounded-xl p-4 sm:p-6 space-y-4 min-w-0 shadow">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-gray-800/60 pb-3 flex justify-between items-center">
+              <span>30-Day Recovery Signals</span>
+              <span className="text-[10px] bg-primary-accent/10 border border-primary-accent/30 text-primary-accent font-mono font-bold px-2 py-0.5 rounded uppercase">
+                Active Baseline ({recoveryLogs.length} logs)
+              </span>
+            </h3>
+            <RecoveryTrendsChart recoveryData={recoveryLogs} />
+          </div>
+        )}
       </div>
     );
   }
@@ -176,6 +243,7 @@ export default function Analytics() {
           onActionClick={() => navigate('/workouts')}
         />
         <LongTermTrainingTrends coachingData={coachingData} />
+        {renderRecoveryTrends()}
       </div>
     );
   }
@@ -448,6 +516,7 @@ export default function Analytics() {
           </div>
         </div>
       )}
+      {renderRecoveryTrends()}
     </div>
   );
 }

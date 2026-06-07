@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   LogOut,
   Menu,
-  X
+  X,
+  ClipboardCheck
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
@@ -27,8 +28,8 @@ export default function DashboardLayout({ children }) {
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Workouts', path: '/workouts', icon: Dumbbell },
     { name: 'Training Guidance', path: '/recommendations', icon: BrainCircuit },
+    { name: 'Daily Log', path: '/daily-log', icon: ClipboardCheck },
     { name: 'Analytics', path: '/analytics', icon: TrendingUp },
-    { name: 'Sessions', path: '/sessions', icon: Calendar },
     { name: 'Personal Records', path: '/records', icon: Trophy },
     { name: 'Profile', path: '/profile', icon: User }
   ];

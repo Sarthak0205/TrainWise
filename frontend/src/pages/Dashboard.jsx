@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { workoutApi, coachingApi } from '../services/api';
+import { workoutApi, coachingApi, dailyLogApi } from '../services/api';
 import TopStats from '../components/TopStats';
 import { 
   VolumeTrendChart, 
@@ -17,7 +17,8 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
-  TrendingUp
+  TrendingUp,
+  ClipboardCheck
 } from 'lucide-react';
 
 function getConfidenceLabel(confidence) {
@@ -111,6 +112,8 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [recs, setRecs] = useState([]);
   const [coachingData, setCoachingData] = useState(null);
+  const [todaysLog, setTodaysLog] = useState(null);
+  const [isSkipped, setIsSkipped] = useState(false);
   const [error, setError] = useState(null);
   const [mlServiceAvailable, setMlServiceAvailable] = useState(true);
   const [showReasoning, setShowReasoning] = useState(false);
@@ -121,13 +124,23 @@ export default function Dashboard() {
     try {
       setLoading(true);
       setError(null);
-      const [summary, recommendations, coaching] = await Promise.all([
+      const localToday = new Date().toISOString().split('T')[0];
+      const skipped = localStorage.getItem(`skipped_checkin_${localToday}`);
+      setIsSkipped(!!skipped);
+
+      const [summary, recommendations, coaching, logRes] = await Promise.all([
         workoutApi.getDashboardSummary(),
         workoutApi.getWorkoutRecommendations(),
-        coachingApi.getSummary()
+        coachingApi.getSummary(localToday),
+        dailyLogApi.getTodaysLog(localToday)
       ]);
       setData(summary);
       setCoachingData(coaching);
+      if (logRes.success && logRes.data) {
+        setTodaysLog(logRes.data);
+      } else {
+        setTodaysLog(null);
+      }
       if (recommendations.success) {
         setRecs(recommendations.data);
         if (recommendations.mlServiceAvailable !== undefined) {
@@ -262,13 +275,82 @@ export default function Dashboard() {
             <span className="text-lg font-bold text-text-secondary mt-1 block">
               {readiness.status || 'Building Baseline'}
             </span>
-            <p className="text-[11px] text-text-secondary leading-normal border-t border-gray-855 pt-2 mt-2">
+            <p className="whitespace-pre-line text-[11px] text-text-secondary leading-normal border-t border-gray-855 pt-2 mt-2">
               {readiness.explanation || 'Complete more workouts to unlock coaching intelligence.'}
             </p>
           </div>
         </div>
       </div>
     );
+  }
+
+  function handleSkipCheckIn() {
+    const localToday = new Date().toISOString().split('T')[0];
+    localStorage.setItem(`skipped_checkin_${localToday}`, 'true');
+    setIsSkipped(true);
+  }
+
+  function renderRecoveryCheckInCard() {
+    if (todaysLog) {
+      return (
+        <div className="bg-bg-card border border-gray-800 rounded-xl p-4 flex items-center justify-between gap-4 shadow">
+          <div className="flex items-center gap-3">
+            <ClipboardCheck className="h-5 w-5 text-primary-accent shrink-0" />
+            <div>
+              <span className="text-[10px] text-text-secondary uppercase tracking-widest font-mono font-bold block">
+                Today's Recovery Context
+              </span>
+              <span className="text-sm font-bold text-white block">
+                {todaysLog.recoveryContext}
+              </span>
+              <span className="text-[11px] text-text-secondary">
+                Sleep: {todaysLog.sleep}/5 • Energy: {todaysLog.energy}/5
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/daily-log')}
+            className="text-xs text-secondary-accent hover:underline font-bold shrink-0 cursor-pointer"
+          >
+            View Check-In
+          </button>
+        </div>
+      );
+    }
+
+    if (!isSkipped) {
+      return (
+        <div className="bg-bg-card border border-gray-800 rounded-xl p-4 flex items-center justify-between gap-4 shadow">
+          <div className="flex items-center gap-3">
+            <ClipboardCheck className="h-5 w-5 text-warning-custom shrink-0 animate-pulse" />
+            <div>
+              <span className="text-[10px] text-text-secondary uppercase tracking-widest font-mono font-bold block">
+                Today's Recovery Check-In
+              </span>
+              <span className="text-xs text-white">
+                How are you feeling today?
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={handleSkipCheckIn}
+              className="text-xs text-text-secondary hover:text-white transition-colors cursor-pointer font-bold"
+            >
+              Skip Today
+            </button>
+            <button
+              onClick={() => navigate('/daily-log')}
+              className="bg-primary-accent text-black text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-primary-accent/90 transition-all cursor-pointer shadow-sm"
+            >
+              Complete Check-In
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
   }
 
   const latestFatigue = fatigueTrend.length > 0 ? fatigueTrend[fatigueTrend.length - 1].score : 0;
@@ -278,7 +360,7 @@ export default function Dashboard() {
   const primaryRec = recs.length > 0 ? recs[0] : null;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto">
       
       {/* Header and Smart CTA */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -314,6 +396,9 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Recovery Check-in Card (Refinement 4) */}
+      {renderRecoveryCheckInCard()}
 
       {/* 2. Onboarding Steps Checklist for low-history users (1-4 sessions) */}
       {totalSessions > 0 && totalSessions < 5 && (
@@ -498,7 +583,7 @@ export default function Dashboard() {
         {showRecoveryDetails && (
           <div className="pt-3 border-t border-gray-800/50 space-y-3 text-xs text-text-secondary leading-relaxed bg-black/10 p-3 rounded-lg mt-2.5">
             <p className="font-semibold text-white">Coach Recovery Analysis:</p>
-            <p>{readiness.explanation || 'Recovery guidance will activate as your training baseline matures.'}</p>
+            <p className="whitespace-pre-line">{readiness.explanation || 'Recovery guidance will activate as your training baseline matures.'}</p>
             <div className="grid grid-cols-2 gap-4 pt-2 font-mono">
               <div>
                 <span className="text-[10px] text-text-secondary block">READINESS TREND</span>
@@ -551,7 +636,7 @@ export default function Dashboard() {
                 )}
               </span>
             </div>
-            <p className="text-[11px] text-text-secondary leading-normal border-t border-gray-855 pt-2 mt-2">
+            <p className="whitespace-pre-line text-[11px] text-text-secondary leading-normal border-t border-gray-855 pt-2 mt-2">
               {readiness.explanation}
             </p>
           </div>

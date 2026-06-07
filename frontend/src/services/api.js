@@ -80,8 +80,27 @@ export const workoutApi = {
 };
 
 export const coachingApi = {
-  getSummary: async () => {
-    const response = await api.get('/api/coaching/summary');
+  getSummary: async (date) => {
+    const response = await api.get('/api/coaching/summary', { params: { date } });
+    return response.data;
+  }
+};
+
+export const dailyLogApi = {
+  createOrUpdateLog: async (logData) => {
+    const response = await api.post('/api/daily-log', logData);
+    return response.data;
+  },
+  getTodaysLog: async (date) => {
+    const response = await api.get('/api/daily-log/today', { params: { date } });
+    return response.data;
+  },
+  getRecentLogs: async (limit = 7) => {
+    const response = await api.get('/api/daily-log/recent', { params: { limit } });
+    return response.data;
+  },
+  getDateRangeLogs: async (start, end) => {
+    const response = await api.get('/api/daily-log/range', { params: { start, end } });
     return response.data;
   }
 };

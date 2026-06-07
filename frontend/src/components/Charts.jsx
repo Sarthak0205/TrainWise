@@ -302,3 +302,91 @@ export function CoachingTrendsChart({ trendData }) {
     </ChartFrame>
   );
 }
+
+// 5. Recovery Trends Chart
+export function RecoveryTrendsChart({ recoveryData }) {
+  // Sort chronologically (oldest to newest)
+  const data = [...recoveryData]
+    .reverse()
+    .map(log => ({
+      name: new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      Sleep: log.sleep,
+      Energy: log.energy,
+      Soreness: log.soreness,
+      Stress: log.stress
+    }));
+
+  if (data.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[260px] w-full text-xs text-text-secondary">
+        No recovery history found.
+      </div>
+    );
+  }
+
+  return (
+    <ChartFrame height={280}>
+      {({ width, height }) => (
+        <LineChart width={width} height={height} data={data} margin={{ top: 12, right: 16, left: 8, bottom: 8 }}>
+          <CartesianGrid stroke="#222" vertical={false} />
+          <XAxis 
+            dataKey="name" 
+            stroke="#555" 
+            tick={{ fill: '#B8C0CC', fontSize: 10 }}
+            axisLine={false}
+            tickLine={false}
+            interval="preserveStartEnd"
+            minTickGap={24}
+          />
+          <YAxis 
+            stroke="#555" 
+            tick={{ fill: '#B8C0CC', fontSize: 10 }}
+            axisLine={false}
+            tickLine={false}
+            domain={[1, 5]}
+            ticks={[1, 2, 3, 4, 5]}
+            width={30}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 10, paddingTop: 10 }} />
+          <Line 
+            type="monotone" 
+            dataKey="Sleep" 
+            name="Sleep Quality"
+            stroke="#00B8FF" 
+            strokeWidth={2}
+            activeDot={{ r: 5 }}
+            dot={{ r: 2 }}
+          />
+          <Line 
+            type="monotone" 
+            dataKey="Energy" 
+            name="Energy Level"
+            stroke="#FFC857" 
+            strokeWidth={2}
+            activeDot={{ r: 5 }}
+            dot={{ r: 2 }}
+          />
+          <Line 
+            type="monotone" 
+            dataKey="Soreness" 
+            name="Muscle Soreness"
+            stroke="#FF5A5A" 
+            strokeWidth={2}
+            activeDot={{ r: 5 }}
+            dot={{ r: 2 }}
+          />
+          <Line 
+            type="monotone" 
+            dataKey="Stress" 
+            name="Stress Level"
+            stroke="#A855F7" 
+            strokeWidth={2}
+            activeDot={{ r: 5 }}
+            dot={{ r: 2 }}
+          />
+        </LineChart>
+      )}
+    </ChartFrame>
+  );
+}

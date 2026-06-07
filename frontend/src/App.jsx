@@ -11,6 +11,7 @@ import Sessions from './pages/Sessions';
 import ExerciseDetails from './pages/ExerciseDetails';
 import Records from './pages/Records';
 import Profile from './pages/Profile';
+import DailyLog from './pages/DailyLog';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -34,6 +35,7 @@ export default function App() {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/workouts" element={<Workouts />} />
                     <Route path="/recommendations" element={<Recommendations />} />
+                    <Route path="/daily-log" element={<DailyLog />} />
                     <Route path="/analytics" element={<Analytics />} />
                     <Route path="/sessions" element={<Sessions />} />
                     <Route path="/exercise/:exercise" element={<ExerciseDetails />} />

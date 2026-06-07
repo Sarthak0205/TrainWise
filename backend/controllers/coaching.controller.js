@@ -5,7 +5,7 @@ const coachingService = require("../services/coaching.service");
  */
 async function getReadiness(req, res) {
     try {
-        const result = await coachingService.calculateReadiness(req.user._id);
+        const result = await coachingService.calculateReadiness(req.user._id, req.query.date);
         return res.json(result);
     } catch (err) {
         console.error("❌ Coaching Controller - getReadiness Error:", err);
@@ -44,7 +44,7 @@ async function getPlateaus(req, res) {
  */
 async function getRecovery(req, res) {
     try {
-        const result = await coachingService.recommendRecovery(req.user._id);
+        const result = await coachingService.recommendRecovery(req.user._id, req.query.date);
         return res.json(result);
     } catch (err) {
         console.error("❌ Coaching Controller - getRecovery Error:", err);
@@ -57,7 +57,7 @@ async function getRecovery(req, res) {
  */
 async function getSummary(req, res) {
     try {
-        const result = await coachingService.getCoachingSummary(req.user._id);
+        const result = await coachingService.getCoachingSummary(req.user._id, req.query.date);
         return res.json(result);
     } catch (err) {
         console.error("❌ Coaching Controller - getSummary Error:", err);

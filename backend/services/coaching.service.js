@@ -209,7 +209,7 @@ async function calculateReadinessForSession(userId, sessions, sessionIdx) {
 /**
  * Feature 1 – Recovery Readiness Score
  */
-async function calculateReadiness(userId) {
+async function calculateReadiness(userId, localDate) {
     const sessions = await Session.find({ userId }).sort({ date: -1 });
 
     if (sessions.length < 5) {
@@ -218,6 +218,51 @@ async function calculateReadiness(userId) {
 
     // Latest session readiness
     const currentReadiness = await calculateReadinessForSession(userId, sessions, 0);
+
+    // Fetch today's log
+    const targetDate = localDate ? new Date(localDate) : new Date();
+    targetDate.setUTCHours(0, 0, 0, 0);
+
+    const DailyLog = require("../models/dailyLog.model");
+    const todaysLog = await DailyLog.findOne({ userId, date: targetDate });
+
+    let finalScore = currentReadiness.score;
+    let finalStatus = currentReadiness.status;
+    let finalExplanation = currentReadiness.explanation;
+
+    if (todaysLog) {
+        const dailyLogService = require("./dailyLog.service");
+        const recoveryCtx = dailyLogService.calculateRecoveryContext(todaysLog);
+
+        // Blend score: Workout readiness + recovery modifier (max ±5)
+        finalScore = Math.max(0, Math.min(100, finalScore + recoveryCtx.readinessAdjustment));
+        finalStatus = getReadinessStatus(finalScore);
+
+        // Customize explanation based on user-reported indicators (Refinement 7)
+        let points = [];
+        if (todaysLog.energy >= 4) points.push("High energy");
+        if (todaysLog.energy <= 2) points.push("Low energy");
+        
+        if (todaysLog.sleep >= 4) points.push("Quality sleep");
+        if (todaysLog.sleep <= 2) points.push("Poor sleep quality");
+        
+        if (todaysLog.soreness >= 4) points.push("Elevated soreness");
+        if (todaysLog.soreness <= 2) points.push("Low soreness");
+        
+        if (todaysLog.stress >= 4) points.push("Increased stress");
+        if (todaysLog.stress <= 2) points.push("Low stress levels");
+
+        const bulletText = points.map(p => `• ${p}`).join("\n");
+
+        if (recoveryCtx.readinessAdjustment > 0) {
+            finalExplanation = `${recoveryCtx.recoveryContext}\n\nYou reported:\n${bulletText || "• Favorable recovery indicators"}\n\nThese indicators support normal training intensity.`;
+        } else if (recoveryCtx.readinessAdjustment < 0) {
+            finalExplanation = `${recoveryCtx.recoveryContext}\n\nYou reported:\n${bulletText || "• Elevated fatigue indicators"}\n\nThese indicators may affect recovery quality.`;
+        } else {
+            // Neutral recovery context
+            finalExplanation = `${currentReadiness.explanation}\n\nDaily log indicates neutral recovery signals.`;
+        }
+    }
 
     // Calculate readiness for previous 3 sessions to establish trend
     const recentScores = [];
@@ -243,10 +288,10 @@ async function calculateReadiness(userId) {
     }
 
     return {
-        score: currentReadiness.score,
-        status: currentReadiness.status,
+        score: finalScore,
+        status: finalStatus,
         trend,
-        explanation: currentReadiness.explanation
+        explanation: finalExplanation
     };
 }
 
@@ -477,7 +522,7 @@ async function detectPlateaus(userId) {
 /**
  * Feature 4 – Recovery Recommendation Engine
  */
-async function recommendRecovery(userId) {
+async function recommendRecovery(userId, localDate) {
     const sessions = await Session.find({ userId }).sort({ date: -1 });
 
     if (sessions.length < 5) {
@@ -487,7 +532,7 @@ async function recommendRecovery(userId) {
         };
     }
 
-    const readiness = await calculateReadiness(userId);
+    const readiness = await calculateReadiness(userId, localDate);
 
     // 1. Fatigue Increase check (last 2 vs preceding 3)
     let fatigueIncreasing = false;
@@ -555,6 +600,24 @@ async function recommendRecovery(userId) {
         explanation = "Recovery readiness is currently low. Keep workload conservative and prioritize recovery before adding intensity.";
     }
 
+    // Blend daily recovery signals to strengthen recommendation confidence
+    const targetDate = localDate ? new Date(localDate) : new Date();
+    targetDate.setUTCHours(0, 0, 0, 0);
+    const DailyLog = require("../models/dailyLog.model");
+    const todaysLog = await DailyLog.findOne({ userId, date: targetDate });
+
+    if (todaysLog) {
+        if (todaysLog.soreness >= 4 || todaysLog.sleep <= 2 || todaysLog.stress >= 4) {
+            if (status === "Recovery On Track 🟢") {
+                status = "Monitor Recovery 🟡";
+                explanation = "Your training volume is fine, but today's recovery check-in indicates elevated soreness or stress. Monitor recovery quality before adding intensity.";
+            } else if (status === "Monitor Recovery 🟡") {
+                status = "Recovery Week Worth Considering 🟠";
+                explanation = "Accumulated training stress is high, and today's check-in confirms significant soreness/stress. A recovery week is highly recommended.";
+            }
+        }
+    }
+
     return {
         status,
         explanation
@@ -564,11 +627,11 @@ async function recommendRecovery(userId) {
 /**
  * Summary Endpoint
  */
-async function getCoachingSummary(userId) {
-    const readiness = await calculateReadiness(userId);
+async function getCoachingSummary(userId, localDate) {
+    const readiness = await calculateReadiness(userId, localDate);
     const consistency = await calculateConsistency(userId);
     const plateaus = await detectPlateaus(userId);
-    const recoveryRecommendation = await recommendRecovery(userId);
+    const recoveryRecommendation = await recommendRecovery(userId, localDate);
 
     // Calculate historical trends for the last 12 weeks relative to latest session
     const latestSession = await Session.findOne({ userId }).sort({ date: -1 });
