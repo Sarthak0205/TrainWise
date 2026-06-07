@@ -14,6 +14,7 @@ import Profile from './pages/Profile';
 import DailyLog from './pages/DailyLog';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import WorkoutLogger from './pages/WorkoutLogger';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/workouts" element={<Workouts />} />
+                    <Route path="/log-workout" element={<WorkoutLogger />} />
                     <Route path="/recommendations" element={<Recommendations />} />
                     <Route path="/daily-log" element={<DailyLog />} />
                     <Route path="/analytics" element={<Analytics />} />

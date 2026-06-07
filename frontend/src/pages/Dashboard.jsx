@@ -251,15 +251,26 @@ export default function Dashboard() {
             </ul>
           </div>
 
-          <div className="space-y-3 pt-2">
-            <button
-              onClick={() => navigate('/workouts')}
-              className="bg-primary-accent text-black font-bold text-sm px-6 py-3 rounded-lg hover:bg-primary-accent/90 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-lg shadow-primary-accent/15"
-            >
-              Upload Workout History (CSV)
-              <ArrowRight className="h-4 w-4" />
-            </button>
-            <p className="text-[10px] text-text-secondary/70 block">Supports standard fitness app CSV logs (Strong, Hevy, etc.)</p>
+          <div className="space-y-4 pt-2">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                onClick={() => navigate('/log-workout')}
+                className="bg-primary-accent text-black font-bold text-sm px-6 py-3 rounded-lg hover:bg-primary-accent/90 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-lg shadow-primary-accent/15"
+              >
+                <Dumbbell className="h-4 w-4" />
+                Log Your First Workout
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => navigate('/workouts')}
+                className="bg-bg-card border border-gray-800 text-white font-bold text-sm px-6 py-3 rounded-lg hover:bg-white/5 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-md"
+              >
+                Import Workout History (CSV)
+              </button>
+            </div>
+            <p className="text-[10px] text-text-secondary/70 block">
+              Log manual session or import CSV to power Coaching, Analytics, Personal Records, and Recommendations.
+            </p>
           </div>
         </div>
 

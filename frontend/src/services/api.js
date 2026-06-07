@@ -66,6 +66,24 @@ export const workoutApi = {
     return response.data;
   },
 
+  // Save manually logged workout session
+  saveWorkoutSession: async (sessionData, mode = 'append') => {
+    const response = await api.post('/api/workout-log', { ...sessionData, mode });
+    return response.data;
+  },
+
+  // Get distinct list of exercises for autocomplete
+  getExercises: async () => {
+    const response = await api.get('/api/workout-log/exercises');
+    return response.data;
+  },
+
+  // Get historical reference info for a specific exercise
+  getExerciseReference: async (exerciseName) => {
+    const response = await api.get('/api/workout-log/reference', { params: { exerciseName } });
+    return response.data;
+  },
+
   // Get ML feature importance rankings
   getMLFeatureImportance: async () => {
     const response = await api.get('/api/analytics/ml/feature-importance');

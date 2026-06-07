@@ -82,8 +82,8 @@ export default function Records() {
           title="No personal records recorded yet"
           description="Log workouts or upload CSV files to rank your compound lift achievements and estimated 1RM metrics."
           icon={Trophy}
-          actionText="Upload Workout History"
-          onActionClick={() => navigate('/workouts')}
+          actionText="Log Your First Workout"
+          onActionClick={() => navigate('/log-workout')}
         />
       </div>
     );

@@ -106,7 +106,8 @@ async function uploadCSV(req, res) {
                 session = await Session.create({
                     userId: req.user._id,
                     date,
-                    name: `Workout Session on ${dateOnlyStr}`
+                    name: `Workout Session on ${dateOnlyStr}`,
+                    source: "csv"
                 });
             }
             sessionMap[dateISO] = session._id;

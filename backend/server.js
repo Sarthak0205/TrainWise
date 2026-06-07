@@ -72,11 +72,13 @@ const workoutRoutes = require("./routes/workout.routes");
 const userRoutes = require("./routes/user.routes");
 const coachingRoutes = require("./routes/coaching.routes");
 const dailyLogRoutes = require("./routes/dailyLog.routes");
+const workoutLoggerRoutes = require("./routes/workoutLogger.routes");
 
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/users", userRoutes); // Mounted user domain routes
 app.use("/api/coaching", coachingRoutes);
 app.use("/api/daily-log", dailyLogRoutes);
+app.use("/api/workout-log", workoutLoggerRoutes);
 
 // ML Insights Routes (Objective 5)
 const authMiddleware = require("./middleware/auth.middleware");
