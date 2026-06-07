@@ -15,7 +15,8 @@ import {
   Menu,
   X,
   ClipboardCheck,
-  ClipboardList
+  ClipboardList,
+  Copy
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
@@ -29,6 +30,7 @@ export default function DashboardLayout({ children }) {
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Workouts', path: '/workouts', icon: Dumbbell },
     { name: 'Log Workout', path: '/log-workout', icon: ClipboardList },
+    { name: 'Templates', path: '/templates', icon: Copy },
     { name: 'Training Guidance', path: '/recommendations', icon: BrainCircuit },
     { name: 'Daily Log', path: '/daily-log', icon: ClipboardCheck },
     { name: 'Analytics', path: '/analytics', icon: TrendingUp },

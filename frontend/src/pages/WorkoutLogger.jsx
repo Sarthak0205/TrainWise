@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { workoutApi } from '../services/api';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { workoutApi, templateApi } from '../services/api';
 import { 
   ClipboardList, 
   Plus, 
@@ -15,11 +15,16 @@ import {
   Search,
   BookOpen,
   Trophy,
-  Activity
+  Activity,
+  Copy,
+  FolderOpen,
+  Info,
+  X
 } from 'lucide-react';
 
 export default function WorkoutLogger() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Core state
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -42,11 +47,38 @@ export default function WorkoutLogger() {
   const [loadingAutocomplete, setLoadingAutocomplete] = useState(false);
   const [saving, setSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
-  const [saveResult, setSaveResult] = useState(null); // { exercisesCount, setsCount, volume }
+  const [saveResult, setSaveResult] = useState(null); 
   const [draftRestored, setDraftRestored] = useState(false);
+
+  // Template preloading & Picker Modal states
+  const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
+  const [templatesList, setTemplatesList] = useState({ systemTemplates: [], userTemplates: [] });
+  const [selectedTemplateForPreview, setSelectedTemplateForPreview] = useState(null);
+  
+  // Draft protection modal
+  const [isDraftProtectionOpen, setIsDraftProtectionOpen] = useState(false);
+  const [pendingTemplateToLoad, setPendingTemplateToLoad] = useState(null);
+
+  // Save As Template modal states
+  const [isSaveAsTemplateOpen, setIsSaveAsTemplateOpen] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplateDesc, setNewTemplateDesc] = useState('');
+  const [newTemplateNotes, setNewTemplateNotes] = useState('');
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  // Toast alert
+  const [toastMessage, setToastMessage] = useState(null);
 
   // Dropdown ref for closing on click outside
   const dropdownRef = useRef({});
+
+  // Trigger Toast helper
+  function triggerToast(message) {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  }
 
   // 1. Fetch autocomplete exercise list on mount
   useEffect(() => {
@@ -66,38 +98,63 @@ export default function WorkoutLogger() {
     fetchAutocomplete();
   }, []);
 
-  // 2. Draft persistence: restore draft on mount
-  useEffect(() => {
-    const draftStr = localStorage.getItem('workoutDraft');
-    if (draftStr) {
-      try {
-        const draft = JSON.parse(draftStr);
-        if (draft.date) setDate(draft.date);
-        if (draft.notes) setNotes(draft.notes);
-        if (draft.mode) setMode(draft.mode);
-        if (draft.exercises && Array.isArray(draft.exercises) && draft.exercises.length > 0) {
-          setExercises(draft.exercises);
-        }
-        setDraftRestored(true);
-        // Automatically fetch reference data for loaded exercises
-        draft.exercises.forEach(ex => {
-          if (ex.exercise) {
-            triggerFetchReference(ex.exercise);
-          }
-        });
-
-        // Hide alert after 5 seconds
-        const timer = setTimeout(() => {
-          setDraftRestored(false);
-        }, 5000);
-        return () => clearTimeout(timer);
-      } catch (err) {
-        console.error('Failed to parse autosave draft:', err);
+  // 2. Fetch templates list for picker modal
+  async function fetchTemplates() {
+    try {
+      const res = await templateApi.getTemplates();
+      if (res.success && res.data) {
+        setTemplatesList(res.data);
       }
+    } catch (err) {
+      console.error('Error fetching templates list:', err);
     }
+  }
+
+  useEffect(() => {
+    fetchTemplates();
   }, []);
 
-  // 3. Draft persistence: save draft on changes
+  // 3. Draft persistence: restore draft on mount (ONLY if no templateId query param is present)
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const templateId = queryParams.get('templateId');
+
+    if (templateId) {
+      // Preload template from URL parameters
+      handlePreloadTemplateFromId(templateId);
+    } else {
+      // Restore standard draft
+      const draftStr = localStorage.getItem('workoutDraft');
+      if (draftStr) {
+        try {
+          const draft = JSON.parse(draftStr);
+          if (draft.date) setDate(draft.date);
+          if (draft.notes) setNotes(draft.notes);
+          if (draft.mode) setMode(draft.mode);
+          if (draft.exercises && Array.isArray(draft.exercises) && draft.exercises.length > 0) {
+            setExercises(draft.exercises);
+          }
+          setDraftRestored(true);
+          // Automatically fetch reference data for loaded exercises
+          draft.exercises.forEach(ex => {
+            if (ex.exercise) {
+              triggerFetchReference(ex.exercise);
+            }
+          });
+
+          // Hide alert after 5 seconds
+          const timer = setTimeout(() => {
+            setDraftRestored(false);
+          }, 5000);
+          return () => clearTimeout(timer);
+        } catch (err) {
+          console.error('Failed to parse autosave draft:', err);
+        }
+      }
+    }
+  }, [location.search]);
+
+  // 4. Draft persistence: save draft on changes
   useEffect(() => {
     if (!saveResult) {
       const sessionData = { date, notes, mode, exercises };
@@ -187,6 +244,143 @@ export default function WorkoutLogger() {
     return { exercisesCount, setsCount, volume };
   })();
 
+  // Template Loading Implementation (Refinement 7 & 8)
+  async function handlePreloadTemplateFromId(templateId) {
+    try {
+      const res = await templateApi.getTemplateById(templateId);
+      if (res.success && res.data) {
+        loadTemplateData(res.data);
+        // Record template use
+        await templateApi.recordTemplateUse(templateId);
+      }
+    } catch (err) {
+      console.error('Error preloading template from ID:', err);
+    }
+  }
+
+  function handleLoadTemplateClicked(template) {
+    // If logger is not empty, trigger Draft Protection modal
+    const hasUnsavedChanges = exercises.some(ex => ex.exercise.trim() !== '');
+    if (hasUnsavedChanges) {
+      setPendingTemplateToLoad(template);
+      setIsDraftProtectionOpen(true);
+    } else {
+      loadTemplateData(template);
+      recordUsageStatistics(template._id);
+    }
+    setIsTemplatePickerOpen(false);
+  }
+
+  async function recordUsageStatistics(id) {
+    try {
+      await templateApi.recordTemplateUse(id);
+    } catch (err) {
+      console.error('Failed to log template usage statistics:', err);
+    }
+  }
+
+  function loadTemplateData(template, append = false) {
+    const templateExercises = template.exercises.map((ex, idx) => {
+      // Create empty sets based on targetSets count
+      const sets = Array.from({ length: ex.targetSets }, () => ({ weight: '', reps: '' }));
+      return {
+        id: Date.now() + idx + Math.random(),
+        exercise: ex.exercise,
+        sets
+      };
+    });
+
+    if (append) {
+      setExercises(prev => [...prev.filter(ex => ex.exercise.trim() !== ''), ...templateExercises]);
+      triggerToast(`Appended ${template.name} template!`);
+    } else {
+      setExercises(templateExercises);
+      if (template.notes) {
+        setNotes(prev => prev ? `${prev}\nNotes from template: ${template.notes}` : `Notes from template: ${template.notes}`);
+      }
+      triggerToast(`Loaded ${template.name} template!`);
+    }
+
+    // Trigger reference data fetching for preloaded movements
+    template.exercises.forEach(ex => {
+      triggerFetchReference(ex.exercise);
+    });
+  }
+
+  // Draft Protection choices
+  function handleReplaceDraft() {
+    if (pendingTemplateToLoad) {
+      loadTemplateData(pendingTemplateToLoad, false);
+      recordUsageStatistics(pendingTemplateToLoad._id);
+    }
+    setIsDraftProtectionOpen(false);
+    setPendingTemplateToLoad(null);
+  }
+
+  function handleAppendTemplate() {
+    if (pendingTemplateToLoad) {
+      loadTemplateData(pendingTemplateToLoad, true);
+      recordUsageStatistics(pendingTemplateToLoad._id);
+    }
+    setIsDraftProtectionOpen(false);
+    setPendingTemplateToLoad(null);
+  }
+
+  function handleCancelDraftProtection() {
+    setIsDraftProtectionOpen(false);
+    setPendingTemplateToLoad(null);
+  }
+
+  // Save As Template logic (Refinement 2)
+  async function handleSaveAsTemplateSubmit(e) {
+    e.preventDefault();
+    if (!newTemplateName.trim()) {
+      alert("Template Name is required.");
+      return;
+    }
+
+    const templateExercises = exercises
+      .filter(ex => ex.exercise.trim() !== '')
+      .map((ex, idx) => ({
+        exercise: ex.exercise.trim(),
+        targetSets: ex.sets.length,
+        targetRepRange: "8-12", // Default target rep range
+        category: detectCategory(ex.exercise),
+        order: idx + 1
+      }));
+
+    if (templateExercises.length === 0) {
+      alert("At least one exercise is required to save a template.");
+      return;
+    }
+
+    try {
+      setSavingTemplate(true);
+      const payload = {
+        name: newTemplateName.trim(),
+        description: newTemplateDesc.trim(),
+        notes: newTemplateNotes.trim(),
+        exercises: templateExercises
+      };
+      
+      const res = await templateApi.createTemplate(payload);
+      if (res.success) {
+        triggerToast(`Template "${payload.name}" saved successfully!`);
+        setIsSaveAsTemplateOpen(false);
+        setNewTemplateName('');
+        setNewTemplateDesc('');
+        setNewTemplateNotes('');
+        // Re-fetch templates to keep list updated
+        fetchTemplates();
+      }
+    } catch (err) {
+      console.error('Failed to save workout as template:', err);
+      alert(err.response?.data?.message || 'Error saving template.');
+    } finally {
+      setSavingTemplate(false);
+    }
+  }
+
   // Exercise card event handlers
   function handleAddExercise() {
     setExercises(prev => [
@@ -201,7 +395,6 @@ export default function WorkoutLogger() {
 
   function handleRemoveExercise(id) {
     if (exercises.length === 1) {
-      // Keep at least one exercise structure
       setExercises([
         {
           id: Date.now(),
@@ -238,7 +431,6 @@ export default function WorkoutLogger() {
   function handleAddSet(exerciseId) {
     setExercises(prev => prev.map(ex => {
       if (ex.id === exerciseId) {
-        // Helpful default: duplicate weight/reps of the last set if available
         const lastSet = ex.sets[ex.sets.length - 1];
         const newSet = lastSet 
           ? { weight: lastSet.weight, reps: lastSet.reps }
@@ -286,7 +478,7 @@ export default function WorkoutLogger() {
     e.preventDefault();
     setValidationErrors([]);
 
-    // 1. Client-Side Validations
+    // Client-Side Validations
     const errors = [];
     if (!date) {
       errors.push("Workout date is required.");
@@ -331,7 +523,7 @@ export default function WorkoutLogger() {
       return;
     }
 
-    // 2. Submit payload
+    // Submit payload
     try {
       setSaving(true);
       const payload = {
@@ -365,7 +557,6 @@ export default function WorkoutLogger() {
     }
   }
 
-  // Reset to log another workout
   function handleLogAnother() {
     setExercises([
       {
@@ -380,10 +571,12 @@ export default function WorkoutLogger() {
     setValidationErrors([]);
   }
 
+  const hasExercisesToSaveAsTemplate = exercises.some(ex => ex.exercise.trim() !== '');
+
   // --- RENDERING CONFIRMATION SCREEN ---
   if (saveResult) {
     return (
-      <div className="p-4 sm:p-8 max-w-lg mx-auto mt-12">
+      <div className="p-4 sm:p-8 max-w-lg mx-auto mt-12 animate-fadeIn">
         <div className="bg-bg-card border border-primary-accent/30 rounded-2xl p-8 text-center space-y-6 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 opacity-15 bg-primary-accent rounded-full blur-2xl pointer-events-none" />
           
@@ -434,15 +627,38 @@ export default function WorkoutLogger() {
 
   // --- MAIN LOGGER LAYOUT ---
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto relative">
       
+      {/* Toast Alert Banner */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 px-4.5 py-3 bg-success-custom/10 border border-success-custom/30 text-success-custom rounded-xl shadow-2xl flex items-center gap-2 max-w-sm animate-fadeIn">
+          <Sparkles className="h-4 w-4 shrink-0 animate-pulse" />
+          <span className="text-xs font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="space-y-0.5">
-        <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-          <ClipboardList className="h-6 w-6 text-primary-accent" />
-          Daily Workout Logger
-        </h1>
-        <p className="text-sm text-text-secondary">Perform fast manual entries. Overload suggestions, readiness calculations, and personal records update instantly.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            <ClipboardList className="h-6 w-6 text-primary-accent" />
+            Daily Workout Logger
+          </h1>
+          <p className="text-sm text-text-secondary">Perform fast manual entries or load blueprints from saved templates.</p>
+        </div>
+
+        {/* Load Template Trigger Button */}
+        <button
+          type="button"
+          onClick={() => {
+            fetchTemplates();
+            setIsTemplatePickerOpen(true);
+          }}
+          className="bg-primary-accent/10 border border-primary-accent/30 text-primary-accent font-bold text-xs px-4 py-2.5 rounded-lg hover:bg-primary-accent/20 transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-primary-accent/5 self-start sm:self-center"
+        >
+          <Copy className="h-4 w-4" />
+          Load Template
+        </button>
       </div>
 
       {/* Draft Restored Banner */}
@@ -513,7 +729,7 @@ export default function WorkoutLogger() {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-black/40 border border-gray-800 rounded-lg p-2.5 text-sm font-medium text-white focus:outline-none focus:border-primary-accent/70 transition-all font-mono"
+                className="w-full bg-black/40 border border-gray-800 rounded-lg p-2.5 text-sm font-medium text-white focus:outline-none focus:border-primary-accent/70 transition-all font-mono font-bold"
                 required
               />
             </div>
@@ -586,7 +802,7 @@ export default function WorkoutLogger() {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-gray-850">
                   <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <span className="h-6 w-6 rounded-full bg-black/30 border border-gray-850 flex items-center justify-center text-xs font-bold text-text-secondary font-mono">
+                    <span className="h-6 w-6 rounded-full bg-black/30 border border-gray-855 flex items-center justify-center text-xs font-bold text-text-secondary font-mono">
                       {exIdx + 1}
                     </span>
                     <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">
@@ -623,11 +839,10 @@ export default function WorkoutLogger() {
                         if (ex.exercise) triggerFetchReference(ex.exercise);
                       }}
                       onBlur={() => {
-                        // Delay reference fetch slightly to allow name value updates
                         setTimeout(() => triggerFetchReference(ex.exercise), 200);
                       }}
                       placeholder="Type exercise (e.g. Bench Press)"
-                      className="w-full bg-black/40 border border-gray-800 rounded-lg p-2.5 text-sm font-semibold text-white focus:outline-none focus:border-primary-accent/70 transition-all"
+                      className="w-full bg-black/40 border border-gray-850 rounded-lg p-2.5 text-sm font-semibold text-white focus:outline-none focus:border-primary-accent/70 transition-all"
                       required
                     />
 
@@ -804,11 +1019,23 @@ export default function WorkoutLogger() {
           <button
             type="button"
             onClick={handleAddExercise}
-            className="flex-1 bg-black/35 border border-gray-800 hover:border-gray-700 hover:bg-white/5 rounded-xl py-3 text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            className="flex-1 bg-black/35 border border-gray-850 hover:border-gray-750 hover:bg-white/5 rounded-xl py-3 text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer"
           >
             <Plus className="h-4 w-4 text-primary-accent" />
             Add Exercise Card
           </button>
+
+          {/* Save As Template Button (Refinement 2) */}
+          {hasExercisesToSaveAsTemplate && (
+            <button
+              type="button"
+              onClick={() => setIsSaveAsTemplateOpen(true)}
+              className="flex-1 bg-bg-card border border-gray-800 hover:border-gray-750 hover:bg-white/5 rounded-xl py-3.5 text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Copy className="h-4 w-4 text-primary-accent" />
+              Save As Template
+            </button>
+          )}
 
           {/* Primary CTA Save Workout */}
           <button
@@ -831,6 +1058,273 @@ export default function WorkoutLogger() {
         </div>
 
       </form>
+
+      {/* --- TEMPLATE PICKER MODAL (Refinement 7) --- */}
+      {isTemplatePickerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+          <div 
+            className="w-full max-w-xl bg-bg-card border border-gray-800 rounded-2xl p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center pb-4 border-b border-gray-800">
+              <h2 className="text-lg font-bold text-white uppercase tracking-wider flex items-center gap-2 font-mono">
+                <FolderOpen className="h-5 w-5 text-primary-accent" />
+                Preload Workout Blueprint
+              </h2>
+              <button
+                onClick={() => {
+                  setIsTemplatePickerOpen(false);
+                  setSelectedTemplateForPreview(null);
+                }}
+                className="p-1.5 text-text-secondary hover:text-white rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Preview Panel is Open */}
+            {selectedTemplateForPreview ? (
+              <div className="space-y-5 animate-fadeIn">
+                <div className="bg-black/30 border border-gray-850 p-4 rounded-xl space-y-3">
+                  <div className="flex justify-between items-center pb-2 border-b border-gray-855/50">
+                    <div>
+                      <h3 className="text-base font-bold text-white font-mono">{selectedTemplateForPreview.name}</h3>
+                      <p className="text-xs text-text-secondary mt-0.5">{selectedTemplateForPreview.description || "No description provided."}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTemplateForPreview(null)}
+                      className="text-xs text-secondary-accent hover:underline font-bold"
+                    >
+                      Back to list
+                    </button>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <span className="text-[10px] text-text-secondary uppercase font-bold tracking-wider font-mono block">
+                      Routine Checklist ({selectedTemplateForPreview.exercises.length} Exercises)
+                    </span>
+                    <ul className="space-y-2 text-xs leading-normal">
+                      {selectedTemplateForPreview.exercises.map((ex, idx) => (
+                        <li key={idx} className="flex justify-between items-baseline gap-2 bg-black/20 p-2 rounded border border-gray-855/40 text-text-secondary font-mono">
+                          <span className="font-bold text-white">{ex.exercise}</span>
+                          <span className="text-[10px] text-text-secondary/80 shrink-0">
+                            {ex.targetSets} sets × {ex.targetRepRange} reps
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {selectedTemplateForPreview.notes && (
+                    <div className="text-[10px] text-text-secondary/70 leading-relaxed font-mono flex items-start gap-1 p-2 bg-black/10 rounded-lg">
+                      <Info className="h-4 w-4 text-text-secondary/50 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold text-white block">Template Notes:</span>
+                        <span>{selectedTemplateForPreview.notes}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTemplateForPreview(null)}
+                    className="flex-1 bg-bg-card border border-gray-800 text-white font-bold text-xs py-2.5 rounded-lg hover:bg-white/5 transition-all cursor-pointer"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleLoadTemplateClicked(selectedTemplateForPreview)}
+                    className="flex-1 bg-primary-accent text-black font-extrabold text-xs py-2.5 rounded-lg hover:bg-primary-accent/90 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Check className="h-4 w-4 text-black" />
+                    Use Template
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // Templates Lists Selection
+              <div className="space-y-6">
+                
+                {/* User Templates */}
+                <div className="space-y-2.5">
+                  <span className="text-[10px] text-text-secondary font-bold uppercase tracking-wider font-mono block border-b border-gray-850 pb-1">
+                    My Blueprints ({templatesList.userTemplates.length})
+                  </span>
+                  {templatesList.userTemplates.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {templatesList.userTemplates.map((t) => (
+                        <div 
+                          key={t._id} 
+                          onClick={() => setSelectedTemplateForPreview(t)}
+                          className="bg-black/35 border border-gray-850 hover:border-gray-700 p-4 rounded-xl cursor-pointer transition-all hover:bg-white/5 text-left space-y-1.5"
+                        >
+                          <h4 className="text-xs font-bold text-white truncate">{t.name}</h4>
+                          <span className="text-[9px] text-text-secondary font-mono block">
+                            {t.exercises.length} Exercises • {t.exercises.reduce((s, ex) => s + ex.targetSets, 0)} Sets
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-text-secondary italic pl-1">No custom templates saved yet.</p>
+                  )}
+                </div>
+
+                {/* System Templates */}
+                <div className="space-y-2.5">
+                  <span className="text-[10px] text-text-secondary font-bold uppercase tracking-wider font-mono block border-b border-gray-850 pb-1">
+                    Built-in Routines ({templatesList.systemTemplates.length})
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {templatesList.systemTemplates.map((t) => (
+                      <div 
+                        key={t._id} 
+                        onClick={() => setSelectedTemplateForPreview(t)}
+                        className="bg-black/35 border border-gray-850 hover:border-gray-700 p-4 rounded-xl cursor-pointer transition-all hover:bg-white/5 text-left space-y-1.5"
+                      >
+                        <h4 className="text-xs font-bold text-white truncate flex items-center justify-between gap-2">
+                          {t.name}
+                          <span className="text-[8px] bg-secondary-accent/15 border border-secondary-accent/20 text-secondary-accent px-1.5 py-0.5 rounded-full uppercase scale-90">System</span>
+                        </h4>
+                        <span className="text-[9px] text-text-secondary font-mono block">
+                          {t.exercises.length} Exercises • {t.exercises.reduce((s, ex) => s + ex.targetSets, 0)} Sets
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* --- DRAFT PROTECTION PROMPT DIALOG (Refinement 8) --- */}
+      {isDraftProtectionOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div 
+            className="w-full max-w-md bg-bg-card border border-danger-custom/30 rounded-2xl p-6 space-y-6 shadow-2xl relative text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="h-12 w-12 rounded-full bg-danger-custom/10 border border-danger-custom/25 flex items-center justify-center text-danger-custom mx-auto mb-3">
+              <AlertCircle className="h-6 w-6" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-extrabold text-white">Replace Current Draft?</h3>
+              <p className="text-xs text-text-secondary leading-relaxed max-w-sm mx-auto">
+                Your current workout logger sheet contains unsaved changes. Choose how you want to handle these exercises:
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={handleReplaceDraft}
+                className="w-full bg-danger-custom text-white font-bold text-xs py-2.5 rounded-lg hover:bg-danger-custom/90 transition-colors cursor-pointer shadow-md"
+              >
+                Replace Current Draft (Discard)
+              </button>
+              <button
+                type="button"
+                onClick={handleAppendTemplate}
+                className="w-full bg-secondary-accent hover:bg-secondary-accent/90 text-black font-bold text-xs py-2.5 rounded-lg transition-colors cursor-pointer"
+              >
+                Append Template to Bottom
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelDraftProtection}
+                className="w-full bg-black/40 border border-gray-800 text-white font-semibold text-xs py-2.5 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                Cancel / Keep Current Draft
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- SAVE AS TEMPLATE DIALOG MODAL (Refinement 2) --- */}
+      {isSaveAsTemplateOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div 
+            className="w-full max-w-md bg-bg-card border border-gray-800 rounded-2xl p-6 space-y-6 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center pb-4 border-b border-gray-800">
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                <Copy className="h-4.5 w-4.5 text-primary-accent" />
+                Save Workout Blueprint
+              </h2>
+              <button
+                onClick={() => setIsSaveAsTemplateOpen(false)}
+                className="p-1 text-text-secondary hover:text-white rounded hover:bg-white/5"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAsTemplateSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-text-secondary block">Template Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. My Heavy Chest Day"
+                  value={newTemplateName}
+                  onChange={(e) => setNewTemplateName(e.target.value)}
+                  className="w-full bg-black/40 border border-gray-800 rounded-lg p-2.5 text-xs font-semibold text-white focus:outline-none focus:border-primary-accent"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-text-secondary block">Description (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Flat and incline benches with lateral raises"
+                  value={newTemplateDesc}
+                  onChange={(e) => setNewTemplateDesc(e.target.value)}
+                  className="w-full bg-black/40 border border-gray-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-primary-accent"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-text-secondary block">Coaching Notes (Optional)</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Leave 1-2 reps in reserve. Focus on eccentric contraction."
+                  value={newTemplateNotes}
+                  onChange={(e) => setNewTemplateNotes(e.target.value)}
+                  className="w-full bg-black/40 border border-gray-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-primary-accent leading-normal"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsSaveAsTemplateOpen(false)}
+                  className="flex-1 bg-bg-card border border-gray-800 text-white font-semibold text-xs py-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingTemplate}
+                  className="flex-1 bg-primary-accent text-black font-extrabold text-xs py-2 rounded-lg hover:bg-primary-accent/90 transition-all cursor-pointer flex items-center justify-center"
+                >
+                  {savingTemplate ? 'Saving Blueprint...' : 'Save Blueprint'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

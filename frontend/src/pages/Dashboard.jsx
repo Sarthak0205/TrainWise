@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { workoutApi, coachingApi, dailyLogApi } from '../services/api';
+import { workoutApi, coachingApi, dailyLogApi, templateApi } from '../services/api';
 import TopStats from '../components/TopStats';
 import { 
   VolumeTrendChart, 
@@ -18,7 +18,9 @@ import {
   ChevronDown,
   ChevronUp,
   TrendingUp,
-  ClipboardCheck
+  ClipboardCheck,
+  Copy,
+  Play
 } from 'lucide-react';
 
 function getConfidenceLabel(confidence) {
@@ -113,6 +115,7 @@ export default function Dashboard() {
   const [recs, setRecs] = useState([]);
   const [coachingData, setCoachingData] = useState(null);
   const [todaysLog, setTodaysLog] = useState(null);
+  const [templates, setTemplates] = useState({ systemTemplates: [], userTemplates: [] });
   const [isSkipped, setIsSkipped] = useState(false);
   const [error, setError] = useState(null);
   const [mlServiceAvailable, setMlServiceAvailable] = useState(true);
@@ -128,11 +131,12 @@ export default function Dashboard() {
       const skipped = localStorage.getItem(`skipped_checkin_${localToday}`);
       setIsSkipped(!!skipped);
 
-      const [summary, recommendations, coaching, logRes] = await Promise.all([
+      const [summary, recommendations, coaching, logRes, templatesRes] = await Promise.all([
         workoutApi.getDashboardSummary(),
         workoutApi.getWorkoutRecommendations(),
         coachingApi.getSummary(localToday),
-        dailyLogApi.getTodaysLog(localToday)
+        dailyLogApi.getTodaysLog(localToday),
+        templateApi.getTemplates()
       ]);
       setData(summary);
       setCoachingData(coaching);
@@ -140,6 +144,9 @@ export default function Dashboard() {
         setTodaysLog(logRes.data);
       } else {
         setTodaysLog(null);
+      }
+      if (templatesRes.success && templatesRes.data) {
+        setTemplates(templatesRes.data);
       }
       if (recommendations.success) {
         setRecs(recommendations.data);
@@ -260,6 +267,13 @@ export default function Dashboard() {
                 <Dumbbell className="h-4 w-4" />
                 Log Your First Workout
                 <ArrowRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => navigate('/templates')}
+                className="bg-bg-card border border-gray-800 text-white font-bold text-sm px-6 py-3 rounded-lg hover:bg-white/5 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-md"
+              >
+                <Copy className="h-4 w-4 text-primary-accent" />
+                Start From Template
               </button>
               <button
                 onClick={() => navigate('/workouts')}
@@ -737,6 +751,52 @@ export default function Dashboard() {
             </p>
           </div>
 
+        </div>
+      </div>
+
+      {/* Quick Start Workout Widget (Refinement 4) */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
+          <Copy className="h-4.5 w-4.5 text-primary-accent" />
+          Quick Start Workout
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {((templates.userTemplates && templates.userTemplates.length > 0)
+            ? templates.userTemplates.slice(0, 3)
+            : templates.systemTemplates.slice(0, 3)
+          ).map((t) => (
+            <div
+              key={t._id}
+              className="bg-bg-card border border-gray-800 rounded-xl p-4.5 flex flex-col justify-between space-y-3 hover:border-gray-700 transition-all relative overflow-hidden group shadow-md"
+            >
+              {/* Background glow overlay */}
+              <div className="absolute top-0 right-0 w-20 h-20 opacity-5 bg-primary-accent rounded-full blur-xl pointer-events-none" />
+
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-extrabold text-white truncate flex items-center justify-between gap-1.5">
+                  {t.name}
+                  {t.isSystem && (
+                    <span className="text-[8px] bg-secondary-accent/15 border border-secondary-accent/20 text-secondary-accent px-1.5 py-0.5 rounded-full uppercase shrink-0 font-mono">
+                      System
+                    </span>
+                  )}
+                </h4>
+                <p className="text-[11px] text-text-secondary line-clamp-2 leading-relaxed min-h-[2.5rem]">
+                  {t.description || "No description provided."}
+                </p>
+                <span className="text-[10px] text-text-secondary/70 font-mono block">
+                  {t.exercises?.length || 0} Exercises • {t.exercises?.reduce((sum, ex) => sum + (ex.targetSets || 3), 0) || 0} Sets
+                </span>
+              </div>
+              <button
+                onClick={() => navigate(`/log-workout?templateId=${t._id}`)}
+                className="w-full bg-primary-accent hover:bg-primary-accent/90 text-black text-[11px] font-extrabold py-2 rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer"
+              >
+                <Play className="h-3 w-3 fill-black text-black" />
+                Start Workout
+              </button>
+            </div>
+          ))}
         </div>
       </div>
 

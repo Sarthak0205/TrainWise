@@ -123,4 +123,31 @@ export const dailyLogApi = {
   }
 };
 
+export const templateApi = {
+  createTemplate: async (data) => {
+    const response = await api.post('/api/templates', data);
+    return response.data;
+  },
+  getTemplates: async () => {
+    const response = await api.get('/api/templates');
+    return response.data;
+  },
+  getTemplateById: async (id) => {
+    const response = await api.get(`/api/templates/${id}`);
+    return response.data;
+  },
+  updateTemplate: async (id, data) => {
+    const response = await api.put(`/api/templates/${id}`, data);
+    return response.data;
+  },
+  deleteTemplate: async (id) => {
+    const response = await api.delete(`/api/templates/${id}`);
+    return response.data;
+  },
+  recordTemplateUse: async (id) => {
+    const response = await api.post(`/api/templates/${id}/use`);
+    return response.data;
+  }
+};
+
 export default api;

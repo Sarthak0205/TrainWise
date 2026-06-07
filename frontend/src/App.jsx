@@ -15,6 +15,7 @@ import DailyLog from './pages/DailyLog';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import WorkoutLogger from './pages/WorkoutLogger';
+import Templates from './pages/Templates';
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/workouts" element={<Workouts />} />
                     <Route path="/log-workout" element={<WorkoutLogger />} />
+                    <Route path="/templates" element={<Templates />} />
                     <Route path="/recommendations" element={<Recommendations />} />
                     <Route path="/daily-log" element={<DailyLog />} />
                     <Route path="/analytics" element={<Analytics />} />
