@@ -1,260 +1,393 @@
 # TrainWise
 
-### Train Smarter. Progress Consistently.
+# Train Smarter. Progress Consistently.
 
-![Dashboard](./screenshots/dashboard.png)
+TrainWise is a full-stack fitness intelligence platform that combines workout tracking, recovery monitoring, performance analytics, and coaching intelligence to help athletes make smarter training decisions.
 
-TrainWise is a full-stack fitness intelligence platform that combines workout tracking, recovery monitoring, performance analytics, and coaching intelligence to help athletes make informed training decisions.
-
-Unlike traditional workout trackers that only record workouts, TrainWise analyzes training history, recovery signals, consistency patterns, personal records, and workout performance to provide actionable coaching insights and personalized training guidance.
+Unlike traditional workout trackers that simply record workouts, TrainWise analyzes training history, recovery signals, consistency patterns, progression trends, and personal records to provide actionable coaching recommendations and long-term performance insights.
 
 ---
 
-## Project Highlights
+## Overview
 
-✅ Full-stack MERN architecture
+TrainWise acts as a daily fitness companion by combining:
 
-✅ JWT authentication and secure user management
+- Workout Tracking
+- Recovery Monitoring
+- Training Analytics
+- Personal Records Tracking
+- Coaching Intelligence
+- Workout Templates
+- Machine Learning Assisted Recommendations
 
-✅ Daily workout logging and session builder
-
-✅ Recovery monitoring and wellness tracking
-
-✅ Personalized coaching intelligence engine
-
-✅ Progressive overload recommendations
-
-✅ Workout templates and saved routines
-
-✅ Personal records and estimated 1RM tracking
-
-✅ Performance analytics dashboard
-
-✅ Machine-learning powered recommendation engine
+The platform continuously evaluates both training performance and recovery readiness to help users train effectively while reducing the risk of stagnation and overtraining.
 
 ---
 
-## Why TrainWise?
+# Features
 
-Most fitness applications stop at recording workouts.
+## Workout Management
 
-TrainWise goes beyond tracking by combining:
-
-* Workout Logging
-* Recovery Monitoring
-* Coaching Intelligence
-* Performance Analytics
-* Personal Records
-* Progressive Overload Guidance
-
-into a single athlete-focused platform.
-
-The objective is simple:
-
-**Train Smarter. Progress Consistently.**
+- Manual Workout Logger
+- Dynamic Session Builder
+- Session Notes & Reflections
+- CSV Workout History Import
+- Exercise History Tracking
+- Session Timeline Exploration
+- Draft Autosave & Recovery
+- Append / Replace Session Modes
 
 ---
 
-## Features
+## Workout Templates
 
-### Training Management
-
-* Manual workout logging with dynamic session builder
-* Workout templates (Push, Pull, Legs, Upper/Lower, and custom routines)
-* CSV workout history import
-* Exercise history and session exploration
-* Draft autosave and session recovery
-* Session notes and workout reflections
-
-### Coaching Intelligence
-
-* Training Readiness Score
-* Recovery Recommendations
-* Consistency Tracking
-* Plateau Detection
-* Progress Status Analysis
-* Next Training Target Recommendations
-* Progressive Overload Guidance
-
-### Recovery Monitoring
-
-* Daily Recovery Check-Ins
-* Sleep, Energy, Stress, Mood, and Soreness tracking
-* Recovery Context Scoring
-* Recovery Trend Analysis
-* Recovery-adjusted readiness calculations
-
-### Analytics & Insights
-
-* Weekly Volume Trends
-* Long-Term Progress Analytics
-* Movement Pattern Balance Analysis
-* Training Consistency Metrics
-* Historical Performance Tracking
-* Fatigue Coefficient Tracking
-
-### Personal Records
-
-* Personal Record Hall of Fame
-* Estimated 1RM Calculations
-* Compound Lift Rankings
-* Achievement Tracking
-* Exercise-Specific Progress Pages
-
-### Workout Templates
-
-* Built-in Push/Pull/Legs templates
-* Upper Body and Lower Body routines
-* Custom workout templates
-* Save workouts as reusable routines
-* Quick-start training workflows
-* Template usage tracking
+- Built-in Push Day Template
+- Built-in Pull Day Template
+- Built-in Leg Day Template
+- Built-in Upper Body Template
+- Built-in Lower Body Template
+- Custom Workout Templates
+- Save Existing Workouts as Templates
+- Quick Start Training Workflows
+- Template Usage Tracking
 
 ---
 
-## System Architecture
+## Recovery Monitoring
+
+### Daily Recovery Check-In
+
+Track:
+
+- Sleep Quality
+- Energy Levels
+- Stress Levels
+- Mood
+- Muscle Soreness
+- Bodyweight
+- Training Day Status
+
+### Recovery Intelligence
+
+- Recovery Context Scoring
+- Recovery Trend Analysis
+- Recovery Recommendations
+- Recovery-Adjusted Coaching
+
+---
+
+## Coaching Intelligence
+
+TrainWise combines historical training performance and recovery signals to generate:
+
+### Readiness Analysis
+
+- Training Readiness Score
+- Recovery Status
+- Readiness Trend Analysis
+- Fatigue Monitoring
+
+### Training Guidance
+
+- Progressive Overload Suggestions
+- Next Session Targets
+- Weight Progression Recommendations
+- Rep Range Recommendations
+- Exercise-Level Coaching
+
+### Performance Monitoring
+
+- Consistency Score
+- Training Streak Analysis
+- Plateau Detection
+- Progress Status Analysis
+
+---
+
+## Analytics & Insights
+
+### Performance Analytics
+
+- Weekly Training Volume Trends
+- Historical Progress Tracking
+- Long-Term Training Trends
+- Exercise Frequency Analysis
+
+### Training Balance
+
+- Movement Pattern Analysis
+- Push/Pull/Legs Distribution
+- Volume Distribution Insights
+
+### Recovery Analytics
+
+- Recovery Trends
+- Sleep Trends
+- Energy Trends
+- Stress Trends
+- Soreness Trends
+
+---
+
+## Personal Records
+
+### PR Hall of Fame
+
+- Top Lift Rankings
+- Estimated 1RM Tracking
+- Exercise Record Pages
+- Historical Record Progression
+
+### Achievements
+
+- Strength Milestones
+- Progress Highlights
+- Performance Records
+
+---
+
+# System Architecture
 
 ```text
-React + Vite Frontend
-          │
-          ▼
-      Express API
-          │
- ┌────────┼────────┐
- ▼        ▼        ▼
-MongoDB  Coaching  Analytics
-         Engine     Engine
-            │
-            ▼
-     Recovery Context
-            │
-            ▼
-     Recommendations
+                                ┌──────────────┐
+                                │    User      │
+                                └──────┬───────┘
+                                       │
+                                       ▼
+                     ┌──────────────────────────────┐
+                     │ React + Vite Frontend       │
+                     │                              │
+                     │ • Dashboard                 │
+                     │ • Workout Logger            │
+                     │ • Templates                │
+                     │ • Daily Recovery Log       │
+                     │ • Analytics                │
+                     │ • Personal Records         │
+                     │ • Training Guidance        │
+                     └──────────────┬─────────────┘
+                                    │
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │ JWT Authentication Layer    │
+                     └──────────────┬─────────────┘
+                                    │
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │ Node.js + Express Backend    │
+                     │                              │
+                     │ • Auth Service              │
+                     │ • Workout Service           │
+                     │ • Daily Log Service         │
+                     │ • Template Service          │
+                     │ • Analytics Service         │
+                     │ • Coaching Service          │
+                     │ • Recommendation Service    │
+                     └───────┬─────────┬──────────┘
+                             │         │
+               ┌─────────────┘         └─────────────┐
+               ▼                                     ▼
+
+┌───────────────────────────┐      ┌───────────────────────────┐
+│ MongoDB Atlas             │      │ FastAPI ML Service        │
+│                           │      │                           │
+│ • Users                   │      │ • Random Forest Models   │
+│ • Workouts                │      │ • Weight Prediction      │
+│ • Sessions                │      │ • Rep Prediction         │
+│ • Daily Logs              │      │ • Recommendation Engine  │
+│ • Templates               │      │                           │
+│ • Personal Records        │      │                           │
+└──────────────┬────────────┘      └──────────────┬────────────┘
+               │                                  │
+               └──────────────┬───────────────────┘
+                              ▼
+
+         ┌─────────────────────────────────────────────┐
+         │      TrainWise Intelligence Layer           │
+         └─────────────────────────────────────────────┘
+
+                 ┌─────────────┐
+                 │ Coaching    │
+                 │ Engine      │
+                 │             │
+                 │ Readiness   │
+                 │ Consistency │
+                 │ Plateau     │
+                 └──────┬──────┘
+
+                 ┌──────▼──────┐
+                 │ Recovery    │
+                 │ Engine      │
+                 │             │
+                 │ Sleep       │
+                 │ Energy      │
+                 │ Stress      │
+                 │ Recovery    │
+                 └──────┬──────┘
+
+                 ┌──────▼──────┐
+                 │ Analytics   │
+                 │ Engine      │
+                 │             │
+                 │ Volume      │
+                 │ Progress    │
+                 │ Balance     │
+                 └──────┬──────┘
+
+                 ┌──────▼──────┐
+                 │ Recommendation
+                 │ Engine
+                 │
+                 │ Next Targets
+                 │ Overload
+                 │ Guidance
+                 └──────┬──────┘
+                        │
+                        ▼
+
+        ┌────────────────────────────────────┐
+        │ User Insights & Actions            │
+        │                                    │
+        │ • Dashboard Insights               │
+        │ • Workout Recommendations          │
+        │ • Recovery Guidance                │
+        │ • Personal Records                 │
+        │ • Analytics Reports                │
+        │ • Training Decisions               │
+        └────────────────────────────────────┘
 ```
 
 ---
 
-## Technology Stack
+# Technology Stack
 
-### Frontend
+## Frontend
 
-* React
-* Vite
-* Tailwind CSS
-* Lucide React
-* Axios
-* Recharts
-
-### Backend
-
-* Node.js
-* Express.js
-
-### Database
-
-* MongoDB
-* Mongoose
-
-### Machine Learning
-
-* FastAPI
-* Python
-* Scikit-Learn
-* Random Forest Models
-
-### Authentication & Security
-
-* JWT Authentication
-* Password Hashing
-* Protected API Routes
+- React
+- Vite
+- JavaScript (ES6+)
+- Tailwind CSS
+- Lucide React
+- Recharts
 
 ---
 
-## Core Modules
+## Backend
 
-| Module            | Purpose                                  |
-| ----------------- | ---------------------------------------- |
-| Dashboard         | Coaching-first athlete overview          |
-| Workout Logger    | Manual workout entry and tracking        |
-| Daily Log         | Recovery and wellness tracking           |
-| Templates         | Saved routines and quick-start workouts  |
-| Analytics         | Performance and volume analysis          |
-| Personal Records  | PR tracking and rankings                 |
-| Training Guidance | AI-assisted coaching recommendations     |
-| Workouts          | Training ingestion and exercise analysis |
+- Node.js
+- Express.js
+- REST APIs
 
 ---
 
-## Screenshots
+## Database
 
-### Dashboard
+- MongoDB Atlas
+- Mongoose ODM
+
+---
+
+## Machine Learning
+
+- Python
+- FastAPI
+- Scikit-Learn
+- Random Forest Models
+
+### ML Capabilities
+
+- Weight Prediction
+- Repetition Prediction
+- Recommendation Assistance
+
+---
+
+## Authentication & Security
+
+- JWT Authentication
+- Protected Routes
+- Password Hashing
+- Secure API Middleware
+- User-Level Data Isolation
+
+---
+
+# Core Modules
+
+| Module | Purpose |
+|----------|----------|
+| Dashboard | Athlete overview and coaching insights |
+| Workout Logger | Manual workout tracking |
+| Templates | Reusable workout routines |
+| Daily Log | Recovery and wellness tracking |
+| Training Guidance | Coaching recommendations |
+| Analytics | Performance analysis and trends |
+| Personal Records | PR tracking and rankings |
+| Profile | Athlete profile management |
+
+---
+
+# Screenshots
+
+## Dashboard
 
 ![Dashboard](./screenshots/dashboard.png)
 
-### Workout Logger
+---
 
-![Workout Logger](./screenshots/workout-logger.png)
-
-### Daily Recovery Check-In
-
-![Daily Recovery Check-In](./screenshots/daily-recovery.png)
-
-### Training Guidance
+## Training Guidance
 
 ![Training Guidance](./screenshots/training-guidance.png)
 
-### Templates
+---
+
+## Daily Recovery Check-In
+
+![Daily Recovery Check-In](./screenshots/daily-recovery.png)
+
+---
+
+## Workout Logger
+
+![Workout Logger](./screenshots/workout-logger.png)
+
+---
+
+## Templates
 
 ![Templates](./screenshots/templates.png)
 
-### Analytics
+---
+
+## Analytics
 
 ![Analytics](./screenshots/analytics.png)
 
-### Personal Records
+---
+
+## Personal Records
 
 ![Personal Records](./screenshots/personal-records.png)
 
 ---
 
-## Repository Structure
+## Architecture Diagram
 
-```text
-TrainWise/
-│
-├── frontend/
-│   ├── src/
-│   ├── components/
-│   ├── pages/
-│   ├── layouts/
-│   └── services/
-│
-├── backend/
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   ├── services/
-│   ├── middleware/
-│   └── ml-service/
-│
-├── screenshots/
-│
-├── README.md
-└── .gitignore
-```
+![Architecture](./screenshots/architecture.png)
 
 ---
 
-## Installation
+# Installation
 
-### Clone Repository
+## Clone Repository
 
 ```bash
 git clone https://github.com/Sarthak0205/TrainWise.git
 cd TrainWise
 ```
 
-### Backend Setup
+---
+
+## Backend Setup
 
 ```bash
 cd backend
@@ -264,7 +397,15 @@ npm install
 npm run dev
 ```
 
-### Frontend Setup
+Runs on:
+
+```text
+http://localhost:5000
+```
+
+---
+
+## Frontend Setup
 
 ```bash
 cd frontend
@@ -274,7 +415,15 @@ npm install
 npm run dev
 ```
 
-### Machine Learning Service
+Runs on:
+
+```text
+http://localhost:5173
+```
+
+---
+
+## Machine Learning Service
 
 ```bash
 cd backend/ml-service
@@ -284,82 +433,73 @@ pip install -r requirements.txt
 uvicorn app:app --reload
 ```
 
----
+Runs on:
 
-## Environment Variables
-
-Create a `.env` file inside the backend directory.
-
-```env
-PORT=5000
-
-MONGO_URI=your_mongodb_connection_string
-
-JWT_SECRET=your_secret_key
-
-ML_SERVICE_URL=http://localhost:8000
+```text
+http://localhost:8000
 ```
 
 ---
 
-## Future Roadmap
+# Current Release
 
-### Phase 8 – Adaptive Programming
+## Version
 
-* Weekly training plans
-* Auto-regulated progression
-* Deload recommendations
-* Exercise substitutions
-* Adaptive volume management
+**v1.2.0**
 
-### Phase 9 – Intelligent Coaching
+### Included Features
 
-* Goal-specific coaching modes
-* Fatigue-aware progression
-* Readiness-based volume adjustment
-* Adaptive workout programming
-* Dynamic training periodization
+✅ Coaching Intelligence
 
-### Platform Expansion
+✅ Daily Recovery Context
 
-* Cloud deployment
-* Mobile application
-* Coach-athlete dashboards
-* Social training groups
-* Wearable integrations
-* Push notifications
+✅ Workout Logger
 
----
+✅ Workout Templates
 
-## Project Status
+✅ Recovery Tracking
 
-**Version:** v1.2.0
+✅ Performance Analytics
 
-### Current Release Includes
+✅ Personal Records
 
-* Coaching Intelligence
-* Daily Recovery Context
-* Workout Logger
-* Workout Templates
-* Performance Analytics
-* Personal Records
-* Recovery Tracking
-* Machine Learning Recommendation Engine
+✅ Machine Learning Recommendations
 
-TrainWise has evolved from a workout analytics tool into a complete fitness intelligence platform designed to help athletes train smarter, recover better, and progress consistently.
+✅ Progressive Overload Guidance
 
 ---
 
-## Author
+# Future Roadmap
 
-**Sarthak Chaudhary**
+## Phase 8 – Adaptive Programming
 
-Computer Engineering Student
+- Weekly Training Plans
+- Auto-Regulated Progression
+- Deload Recommendations
+- Intelligent Exercise Substitutions
+- Adaptive Volume Management
 
-GitHub: https://github.com/Sarthak0205
+---
 
-Project: **TrainWise – Fitness Intelligence Platform**
+## Future Platform Enhancements
 
-### Tagline
+- Cloud Deployment
+- Mobile Application
+- Coach Dashboard
+- Social Features
+- Wearable Integration
+- Advanced AI Coaching
 
-**Train Smarter. Progress Consistently.**
+---
+
+# Author
+
+**Sarthak Chaudhari**
+
+TrainWise was built to help athletes train smarter, recover better, and progress consistently through data-driven fitness intelligence.
+
+---
+
+## Tagline
+
+### Train Smarter. Progress Consistently.
